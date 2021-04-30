@@ -7,15 +7,15 @@
 using namespace std;
 
 namespace pes/*soa*/{
-	enum TipoPessoa{
-		NORMAL = 0, SOCIO_TORCEDOR
-	};
-	struct Pessoa{
-		string nome;
-		bool atendido;
-		TipoPessoa tipo;
+    enum TipoPessoa{
+        NORMAL = 0, SOCIO_TORCEDOR
+    };
+    struct Pessoa{
+        string nome;
+        bool atendido;
+        TipoPessoa tipo;
                 unsigned int turnos;
-	};
+    };
 
         bool RandomChanceGen(unsigned int chance){  ///Not very efficient
             return (((rand() % 100)+1) < chance);
@@ -25,10 +25,10 @@ namespace pes/*soa*/{
                 Pessoa pessoa;
                 pessoa.atendido = false;
                 if(RandomChanceGen(95)){    ///Normal 95% of the time
-			pessoa.tipo = TipoPessoa::NORMAL;
-		}else{
-			pessoa.tipo = TipoPessoa::SOCIO_TORCEDOR;
-		}
+            pessoa.tipo = TipoPessoa::NORMAL;
+        }else{
+            pessoa.tipo = TipoPessoa::SOCIO_TORCEDOR;
+        }
 
                 if(pessoa.tipo == TipoPessoa::NORMAL){
                     if(RandomChanceGen(25)){
@@ -46,12 +46,12 @@ namespace pes/*soa*/{
                     }
                 }
 
-		for(unsigned short I = 0 ; I < 10 ; I++){
-			char rand_char = (rand() % 80) + 33;
-			pessoa.nome += rand_char;
-		}
+        for(unsigned short I = 0 ; I < 10 ; I++){
+            char rand_char = (rand() % 80) + 33;
+            pessoa.nome += rand_char;
+        }
                 return pessoa;
-	}
+    }
 
         void display(Pessoa pessoa, string indentation = ""){
             cout << indentation << "////////////////////////////////" << endl;
@@ -102,6 +102,10 @@ namespace est/*adio*/ {
     }
 
     void display_fila(fila::Fila<pes::Pessoa>& fila, string indentation = ""){
+        if(fila.fila.inicio == nullptr){
+            cout << "Fila Vazia" << endl;
+            return;
+        }
         len::L_Enc<pes::Pessoa> list = fila.fila;
         unsigned long lenght = 1;
         L_Enc_elem<pes::Pessoa> *interm = list.inicio;
@@ -115,30 +119,130 @@ namespace est/*adio*/ {
 
             interm = nullptr;
     }
+
+    void display_todas_filas_normais(Estadio& estadio){
+        cout << "================================" << endl;
+        cout << "Filas Normais:" << endl;
+        for(unsigned int I = 0 ; I < estadio.qtd_normal ; I++){
+            cout << "Fila[" << I << "]: " << endl;
+            display_fila(estadio.guinche_normal[I], "\t");
+        }
+    }
+
+    void display_todas_filas_socio(Estadio& estadio){
+        cout << "================================" << endl;
+        cout << "Filas Socio Torcedoras:" << endl;
+        for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor ; I++){
+            cout << "Fila Socio Torcedora[" << I << "]: " << endl;
+            display_fila(estadio.guinche_socio_torcedor[I], "\t");
+        }
+    }
 }
+
+///////////////////////////////
+
+void mainTimeLoop(est::Estadio& estadio, unsigned long tempo){
+
+    unsigned int pessoasAtendidas = 0;
+    unsigned int numTotalDePessoas = fila::qtd_fila(estadio.total_pessoas);
+
+    for(unsigned long tempoRestante = tempo ; tempoRestante > 0 ; tempoRestante--){
+
+        cout << "\n\n" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
+        cout << "" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
+        cout << "" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
+
+        ///Lidar com a carga de pessoas e dividi-la nas filas...
+        for(unsigned int I = 0 ; I < estadio.carga_tempo ; I++){
+
+            if(pessoasAtendidas == numTotalDePessoas) return;   ///End of simulation
+            pessoasAtendidas++;
+
+            bool goodReturn = 0;
+            fila::consulta_inicio(estadio.total_pessoas, goodReturn);
+            if(!goodReturn) return; ///End of simulation
+
+            pes::Pessoa pessoa = fila::dequeue(estadio.total_pessoas);
+            cout << "Mexendo com pessoa: " << endl;
+            pes::display(pessoa);
+
+            if(pessoa.tipo == pes::TipoPessoa::NORMAL){
+                ///Procurar guiches normais
+                unsigned int menorFila = 0;
+                for(unsigned int J = 0 ; J < estadio.qtd_normal ; J++){
+                    if(fila::qtd_fila(estadio.guinche_normal[J]) < fila::qtd_fila(estadio.guinche_normal[menorFila])){
+                        menorFila = J;
+                    }
+                }
+                fila::queue(estadio.guinche_normal[menorFila], pessoa);
+            }else{
+                ///Procurar guiches socio torcedores
+                unsigned int menorFila = 0;
+                for(unsigned int J = 0 ; J < estadio.qtd_socio_torcedor ; J++){
+                    if(fila::qtd_fila(estadio.guinche_socio_torcedor[J]) < fila::qtd_fila(estadio.guinche_socio_torcedor[menorFila])){
+                        menorFila = J;
+                    }
+                }
+                fila::queue(estadio.guinche_socio_torcedor[menorFila], pessoa);
+            }
+
+            est::display_todas_filas_normais(estadio);
+            est::display_todas_filas_socio(estadio);
+
+        }
+        ///Atender clientes ...
+
+        for(unsigned int I = 0 ; I < estadio.qtd_normal; I++){
+            if(estadio.guinche_normal[I].fila.inicio != nullptr){
+                estadio.guinche_normal[I].fila.inicio->data.turnos--; ///Conexão direta
+            }
+
+            if(estadio.guinche_normal[I].fila.inicio->data.turnos < 1){
+                //fila::dequeue(estadio.guinche_normal[I]); ///NPE
+            }
+
+        }
+
+        for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor; I++){
+            if(estadio.guinche_socio_torcedor[I].fila.inicio != nullptr){
+                estadio.guinche_socio_torcedor[I].fila.inicio->data.turnos--; ///Conexão direta
+            }
+
+            if(estadio.guinche_socio_torcedor[I].fila.inicio->data.turnos < 1){
+                //fila::dequeue(estadio.guinche_socio_torcedor[I]); ///NPE
+            }
+
+        }
+
+        cin.get();
+    }
+
+}
+
+///////////////////////////////
 
 
 int main(){
 
-	srand(time(NULL));
-	unsigned long qtd_socio_torcedor = 0;
-	unsigned long qtd_normal = 0;
-	unsigned long carga_inicial = 0 ;
-	unsigned long carga_tempo = 0;
-	unsigned long tempo = 0;
+    srand(time(NULL));
+    unsigned long qtd_socio_torcedor = 0;
+    unsigned long qtd_normal = 0;
+    unsigned long carga_inicial = 0 ;
+    unsigned long carga_tempo = 0;
+    unsigned long tempo = 0;
 
         est::Estadio estadio;
 
-	cout << "Quantidade de guinces socio-torcedor: ";
-	cin >> qtd_socio_torcedor;
-	cout << "Quantidade de guinches normais: ";
-	cin >> qtd_normal;
-	cout << "Quantidade de pessoas esperando: ";
-	cin >> carga_inicial;
-	cout << "Qauntidade de pessoas que procuram guinches a cada unidade de tempo: ";
-	cin >> carga_tempo;
-	cout << "Quantidade de tempo simulado: ";
-	cin >> tempo;
+    cout << "Quantidade de guinces socio-torcedor: ";
+    cin >> qtd_socio_torcedor;
+    cout << "Quantidade de guinches normais: ";
+    cin >> qtd_normal;
+    cout << "Quantidade de pessoas esperando: ";
+    cin >> carga_inicial;
+    cout << "Qauntidade de pessoas que procuram guinches a cada unidade de tempo: ";
+    cin >> carga_tempo;
+    cout << "Quantidade de tempo simulado: ";
+    cin >> tempo;
 
         fila::Fila<pes::Pessoa> pessoas_total;
         fila::init(pessoas_total);
@@ -152,9 +256,13 @@ int main(){
         estadio.total_pessoas = pessoas_total;
         est::init(estadio, qtd_normal, qtd_socio_torcedor, carga_inicial, carga_tempo);
 
-        est::display_fila(pessoas_total, "\t");
+        //est::display_fila(pessoas_total, "\t");
+
+        mainTimeLoop(estadio, tempo);
+
+        //est::display_todas_filas_normais(estadio);
 
         delete[] estadio.guinche_normal;
         delete[] estadio.guinche_socio_torcedor;
-	return 0;
+    return 0;
 }
