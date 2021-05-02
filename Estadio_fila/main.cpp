@@ -120,22 +120,46 @@ namespace est/*adio*/ {
             interm = nullptr;
     }
 
-    void display_todas_filas_normais(Estadio& estadio){
-        cout << "================================" << endl;
+    void display_todas_filas_normais(Estadio& estadio, string indentation = ""){
+        cout << "================================================================================================" << endl;
         cout << "Filas Normais:" << endl;
         for(unsigned int I = 0 ; I < estadio.qtd_normal ; I++){
             cout << "Fila[" << I << "]: " << endl;
-            display_fila(estadio.guinche_normal[I], "\t");
+            display_fila(estadio.guinche_normal[I], indentation);
         }
+        cout << "================================================================================================" << endl;
     }
 
-    void display_todas_filas_socio(Estadio& estadio){
-        cout << "================================" << endl;
+    void display_inicio_filas_normais(Estadio& estadio, string indentation = ""){
+        cout << "=================================================" << endl;
+        cout << "Filas Normais:" << endl;
+        for(unsigned int I = 0 ; I < estadio.qtd_normal ; I++){
+            cout << "Fila[" << I << "]: " << endl;
+            if(estadio.guinche_normal[I].fila.inicio != nullptr)
+                pes::display(estadio.guinche_normal[I].fila.inicio->data, indentation);
+        }
+        cout << "=================================================" << endl;
+    }
+
+    void display_todas_filas_socio(Estadio& estadio, string indentation = ""){
+        cout << "================================================================================================" << endl;
         cout << "Filas Socio Torcedoras:" << endl;
         for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor ; I++){
             cout << "Fila Socio Torcedora[" << I << "]: " << endl;
-            display_fila(estadio.guinche_socio_torcedor[I], "\t");
+            display_fila(estadio.guinche_socio_torcedor[I], indentation);
         }
+        cout << "================================================================================================" << endl;
+    }
+
+    void display_inicio_filas_socio(Estadio& estadio, string indentation = ""){
+        cout << "=================================================" << endl;
+        cout << "Filas Socio Torcedoras:" << endl;
+        for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor ; I++){
+            cout << "Fila[" << I << "]: " << endl;
+            if(estadio.guinche_socio_torcedor[I].fila.inicio != nullptr)
+                pes::display(estadio.guinche_socio_torcedor[I].fila.inicio->data, indentation);
+        }
+        cout << "=================================================" << endl;
     }
 }
 
@@ -148,23 +172,29 @@ void mainTimeLoop(est::Estadio& estadio, unsigned long tempo){
 
     for(unsigned long tempoRestante = tempo ; tempoRestante > 0 ; tempoRestante--){
 
-        cout << "\n\n" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
-        cout << "" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
-        cout << "" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
+        cout << "\n\n" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
+        cout << "" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
+        cout << "" << "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\" << endl;
 
         ///Lidar com a carga de pessoas e dividi-la nas filas...
         for(unsigned int I = 0 ; I < estadio.carga_tempo ; I++){
 
-            if(pessoasAtendidas == numTotalDePessoas) return;   ///End of simulation
+            if(pessoasAtendidas == numTotalDePessoas){
+                cout << "[ALERTA]Numero de pessoas esperando esgotado, Simulção encerrando." << endl;
+                break;
+            }
             pessoasAtendidas++;
 
             bool goodReturn = 0;
             fila::consulta_inicio(estadio.total_pessoas, goodReturn);
-            if(!goodReturn) return; ///End of simulation
+            if(!goodReturn){
+                cerr << "Corrompimento de Fila 'total_pessoas', Simulação encerrada." << endl;
+                return;
+            }
 
             pes::Pessoa pessoa = fila::dequeue(estadio.total_pessoas);
-            cout << "Mexendo com pessoa: " << endl;
-            pes::display(pessoa);
+            cout << "\tMexendo com pessoa: " << endl;
+            pes::display(pessoa, "\t");
 
             if(pessoa.tipo == pes::TipoPessoa::NORMAL){
                 ///Procurar guiches normais
@@ -174,6 +204,7 @@ void mainTimeLoop(est::Estadio& estadio, unsigned long tempo){
                         menorFila = J;
                     }
                 }
+                cout << "Pessoa Normal incluida na fila '" << menorFila << "'." << endl;
                 fila::queue(estadio.guinche_normal[menorFila], pessoa);
             }else{
                 ///Procurar guiches socio torcedores
@@ -183,39 +214,60 @@ void mainTimeLoop(est::Estadio& estadio, unsigned long tempo){
                         menorFila = J;
                     }
                 }
+                cout << "Pessoa Socio Torcedora incluida na fila '" << menorFila << "'." << endl;
                 fila::queue(estadio.guinche_socio_torcedor[menorFila], pessoa);
             }
 
-            est::display_todas_filas_normais(estadio);
-            est::display_todas_filas_socio(estadio);
-
+            //est::display_todas_filas_normais(estadio);
+            //est::display_todas_filas_socio(estadio);
+            est::display_inicio_filas_socio(estadio, "\t\t");
+            est::display_inicio_filas_normais(estadio, "\t\t");
         }
-        ///Atender clientes ...
 
+
+        ///Atender clientes ...
+        cout << "Atendendo clientes..." << endl;
         for(unsigned int I = 0 ; I < estadio.qtd_normal; I++){
             if(estadio.guinche_normal[I].fila.inicio != nullptr){
                 estadio.guinche_normal[I].fila.inicio->data.turnos--; ///Conexão direta
-            }
 
-            if(estadio.guinche_normal[I].fila.inicio->data.turnos < 1){
-                //fila::dequeue(estadio.guinche_normal[I]); ///NPE
+                if(estadio.guinche_normal[I].fila.inicio->data.turnos < 1){
+                    cout << "Pessoa Normal ' " << estadio.guinche_normal[I].fila.inicio->data.nome << " 'atendida na fila[" << I << "]." << endl;
+                    fila::dequeue(estadio.guinche_normal[I]);
+                }
             }
-
         }
 
         for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor; I++){
             if(estadio.guinche_socio_torcedor[I].fila.inicio != nullptr){
                 estadio.guinche_socio_torcedor[I].fila.inicio->data.turnos--; ///Conexão direta
-            }
 
-            if(estadio.guinche_socio_torcedor[I].fila.inicio->data.turnos < 1){
-                //fila::dequeue(estadio.guinche_socio_torcedor[I]); ///NPE
+                if(estadio.guinche_socio_torcedor[I].fila.inicio->data.turnos < 1){
+                    cout << "Pessoa Socio Torcedora ' " << estadio.guinche_socio_torcedor[I].fila.inicio->data.nome << " 'atendida na fila[" << I << "]." << endl;
+                    fila::dequeue(estadio.guinche_socio_torcedor[I]);
+                }
             }
+        }
+
+        cout << "Situação final das filas: " << endl;
+        est::display_todas_filas_socio(estadio, "\t\t\t");
+        est::display_todas_filas_normais(estadio, "\t\t\t");
+
+        ///Ver se as filas estão vazias, se sim, encerrar a simulação.
+
+        for(unsigned int I = 0 ; I < estadio.qtd_normal; I++){
+
+        }
+
+        for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor; I++){
 
         }
 
         cin.get();
     }
+
+    ///Se codigo chega aqui, tempo acabou
+    cout << "Fim de Tempo, Simulção encerrada." << endl;
 
 }
 
