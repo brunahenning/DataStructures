@@ -14,43 +14,44 @@ namespace pes/*soa*/{
         string nome;
         bool atendido;
         TipoPessoa tipo;
-                unsigned int turnos;
+        unsigned int turnos;
     };
 
-        bool RandomChanceGen(unsigned int chance){  ///Not very efficient
+        inline bool RandomChanceGen(unsigned int chance){  ///Not very efficient
             return (((rand() % 100)+1) < chance);
         }
 
         Pessoa init_and_randomize(){
-                Pessoa pessoa;
-                pessoa.atendido = false;
-                if(RandomChanceGen(95)){    ///Normal 95% of the time
-            pessoa.tipo = TipoPessoa::NORMAL;
-        }else{
-            pessoa.tipo = TipoPessoa::SOCIO_TORCEDOR;
-        }
+            Pessoa pessoa;
+            pessoa.atendido = false;
+            if(RandomChanceGen(95)){    ///Normal 95% of the time
+                pessoa.tipo = TipoPessoa::NORMAL;
+            }else{
+                pessoa.tipo = TipoPessoa::SOCIO_TORCEDOR;
+            }
 
-                if(pessoa.tipo == TipoPessoa::NORMAL){
-                    if(RandomChanceGen(25)){
-                        pessoa.turnos = 1;
-                    }else if(RandomChanceGen(30)){
-                        pessoa.turnos = 2;
-                    }else{
-                        pessoa.turnos = 3;
-                    }
-                }else{  ///SocioTorcedor
-                    if(RandomChanceGen(85)){
-                        pessoa.turnos = 1;
-                    }else{
-                        pessoa.turnos = 2;
-                    }
-                }
+            for(unsigned short I = 0 ; I < 10 ; I++){
+                char rand_char = (rand() % 80) + 33;
+                pessoa.nome += rand_char;
+            }
 
-        for(unsigned short I = 0 ; I < 10 ; I++){
-            char rand_char = (rand() % 80) + 33;
-            pessoa.nome += rand_char;
-        }
+            if(pessoa.tipo == TipoPessoa::NORMAL){
+
+                if(RandomChanceGen(25)){pessoa.turnos = 1; return pessoa;}
+                if(RandomChanceGen(30)){pessoa.turnos = 2; return pessoa;}
+                if(RandomChanceGen(45)){pessoa.turnos = 3; return pessoa;}
+                pessoa.turnos = 3;
                 return pessoa;
+
+            }else{  ///SocioTorcedor
+                if(RandomChanceGen(85)){
+                    pessoa.turnos = 1;
+                }else{
+                    pessoa.turnos = 2;
+                }
+            }
+
+        return pessoa;
     }
 
         void display(Pessoa pessoa, string indentation = ""){
@@ -79,11 +80,6 @@ namespace est/*adio*/ {
         unsigned long carga_inicial;
         unsigned long carga_tempo;
     };
-
-    /* Example:
-        fila::queue(estadio.guinche_normal[0], fila::dequeue(pessoas_total) );
-        pes::display(fila::dequeue(estadio.guinche_normal[0]));
-    */
 
     void init(Estadio& estadio, unsigned int qtd_normal, unsigned int qtd_socio_torcedor, unsigned int carga_inicial, unsigned int carga_tempo){
         ///Make sure to have everything assigned before initing
@@ -163,7 +159,103 @@ namespace est/*adio*/ {
     }
 }
 
-///////////////////////////////
+namespace taxa{
+    struct DadosRelevantes{ /*Dados Relevantes por fila*/
+        unsigned int num_pessoas_total;
+        unsigned int num_pessoas_normal;
+        unsigned int num_pessoas_socio;
+
+        unsigned int num_pessoas_3_turnos_normal;
+        unsigned int num_pessoas_2_turnos_normal;
+        unsigned int num_pessoas_1_turnos_normal;
+
+        unsigned int num_pessoas_2_turnos_socio;
+        unsigned int num_pessoas_1_turnos_socio;
+    };
+
+    inline void init(DadosRelevantes& dados){
+        dados.num_pessoas_total = 0;
+        dados.num_pessoas_normal = 0;
+        dados.num_pessoas_socio = 0;
+
+        dados.num_pessoas_3_turnos_normal = 0;
+        dados.num_pessoas_2_turnos_normal = 0;
+        dados.num_pessoas_1_turnos_normal = 0;
+
+        dados.num_pessoas_2_turnos_socio = 0;
+        dados.num_pessoas_1_turnos_socio = 0;
+    }
+
+    inline double taxa_media(double total, double variavel){
+        return ((variavel / total)*100);
+    }
+
+    void extrair_dados_relevantes(fila::Fila<pes::Pessoa>& fila, DadosRelevantes& dados){
+        len::L_Enc<pes::Pessoa> list = fila.fila;
+        L_Enc_elem<pes::Pessoa> *interm = list.inicio;
+        while( interm->prox != nullptr ){
+            dados.num_pessoas_total++;
+
+            if(interm->data.tipo == pes::TipoPessoa::NORMAL){
+                dados.num_pessoas_normal++;
+                if(interm->data.turnos == 3) dados.num_pessoas_3_turnos_normal++;
+                else if(interm->data.turnos == 2) dados.num_pessoas_2_turnos_normal++;
+                else dados.num_pessoas_1_turnos_normal++;
+            }else{
+                dados.num_pessoas_socio++;
+                if(interm->data.turnos == 2) dados.num_pessoas_2_turnos_socio++;
+                else dados.num_pessoas_1_turnos_socio++;
+            }
+            interm = interm->prox;
+        }
+        ///Ultima pessoa na lista fica fora do loop
+        dados.num_pessoas_total++;
+        if(interm->data.tipo == pes::TipoPessoa::NORMAL){
+            dados.num_pessoas_normal++;
+            if(interm->data.turnos == 3) dados.num_pessoas_3_turnos_normal++;
+            else if(interm->data.turnos == 2) dados.num_pessoas_2_turnos_normal++;
+            else dados.num_pessoas_1_turnos_normal++;
+        }else{
+            dados.num_pessoas_socio++;
+            if(interm->data.turnos == 2) dados.num_pessoas_2_turnos_socio++;
+            else dados.num_pessoas_1_turnos_socio++;
+        }
+
+
+        interm = nullptr;
+    }
+
+    void display(DadosRelevantes dados, pes::TipoPessoa tipo){
+        cout << "Numero de Pessoas na fila:\t\t" << dados.num_pessoas_total << endl;
+        if(tipo == pes::TipoPessoa::NORMAL){
+            cout << "Numero de Pessoas Normais:\t\t" << dados.num_pessoas_normal << "(" << taxa_media(dados.num_pessoas_total, dados.num_pessoas_normal) << "%)" << endl;
+            cout << "Numero de pessoas que precisam de 3 turnos:\t" << dados.num_pessoas_3_turnos_normal << "(" << taxa_media(dados.num_pessoas_normal, dados.num_pessoas_3_turnos_normal) << "%)" << endl;
+            cout << "Numero de pessoas que precisam de 2 turnos:\t" << dados.num_pessoas_2_turnos_normal << "(" << taxa_media(dados.num_pessoas_normal, dados.num_pessoas_2_turnos_normal) << "%)" << endl;
+            cout << "Numero de pessoas que precisam de 1 turnos:\t" << dados.num_pessoas_1_turnos_normal << "(" << taxa_media(dados.num_pessoas_normal, dados.num_pessoas_1_turnos_normal) << "%)" << endl;
+
+        }else{
+            cout << "Numero de Pessoas Socio Torcedoras:\t\t" << dados.num_pessoas_socio << "(" << taxa_media(dados.num_pessoas_total, dados.num_pessoas_socio) << "%)" << endl;
+            cout << "Numero de pessoas que precisam de 2 turnos:\t" << dados.num_pessoas_2_turnos_socio << "(" << taxa_media(dados.num_pessoas_socio, dados.num_pessoas_2_turnos_socio) << "%)" << endl;
+            cout << "Numero de pessoas que precisam de 1 turnos:\t" << dados.num_pessoas_1_turnos_socio << "(" << taxa_media(dados.num_pessoas_socio, dados.num_pessoas_1_turnos_socio) << "%)" << endl;
+        }
+        cout << "\n";
+    }
+
+    void display_tudo(DadosRelevantes dados){
+        cout << "Numero de Pessoas na fila:\t\t" << dados.num_pessoas_total << endl;
+        cout << "Numero de Pessoas Normais:\t\t" << dados.num_pessoas_normal << "(" << taxa_media(dados.num_pessoas_total, dados.num_pessoas_normal) << "%)" << endl;
+        cout << "Numero de pessoas que precisam de 3 turnos:\t" << dados.num_pessoas_3_turnos_normal << "(" << taxa_media(dados.num_pessoas_normal, dados.num_pessoas_3_turnos_normal) << "%)" << endl;
+        cout << "Numero de pessoas que precisam de 2 turnos:\t" << dados.num_pessoas_2_turnos_normal << "(" << taxa_media(dados.num_pessoas_normal, dados.num_pessoas_2_turnos_normal) << "%)" << endl;
+        cout << "Numero de pessoas que precisam de 1 turnos:\t" << dados.num_pessoas_1_turnos_normal << "(" << taxa_media(dados.num_pessoas_normal, dados.num_pessoas_1_turnos_normal) << "%)" << endl;
+        cout << "\n";
+        cout << "Numero de Pessoas Socio Torcedoras:\t\t" << dados.num_pessoas_socio << "(" << taxa_media(dados.num_pessoas_total, dados.num_pessoas_socio) << "%)" << endl;
+        cout << "Numero de pessoas que precisam de 2 turnos:\t" << dados.num_pessoas_2_turnos_socio << "(" << taxa_media(dados.num_pessoas_socio, dados.num_pessoas_2_turnos_socio) << "%)" << endl;
+        cout << "Numero de pessoas que precisam de 1 turnos:\t" << dados.num_pessoas_1_turnos_socio << "(" << taxa_media(dados.num_pessoas_socio, dados.num_pessoas_1_turnos_socio) << "%)" << endl;
+
+        cout << "\n";
+    }
+}
+
 
 void mainTimeLoop(est::Estadio& estadio, unsigned long tempo){
 
@@ -255,12 +347,50 @@ void mainTimeLoop(est::Estadio& estadio, unsigned long tempo){
 
         ///Ver se as filas estão vazias, se sim, encerrar a simulação.
 
+        bool guinche_socio_vazio = true;
+        for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor; I++){
+            if(estadio.guinche_socio_torcedor[I].fila.inicio != nullptr) guinche_socio_vazio = false;
+        }
+        bool guinche_normal_vazio = true;
         for(unsigned int I = 0 ; I < estadio.qtd_normal; I++){
-
+            if(estadio.guinche_normal[I].fila.inicio != nullptr) guinche_normal_vazio = false;
         }
 
-        for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor; I++){
+        if(guinche_socio_vazio){
+            cout << "Todas as filas nos guinches socio torçedoras estão vazias." << endl;
+        }
+        if(guinche_normal_vazio){
+            cout << "Todas as filas nos guinches normais estão vazias." << endl;
+        }
 
+        if(guinche_normal_vazio && guinche_socio_vazio){
+            cout << "Todos as filas estão vazias, Simulção encerrada." << endl;
+            return;
+        }
+
+        ///Mostrar Dados relevantes sobre as filas...
+        cout << "\n\nDados Importantes sobre Guiches Socio Toredores: " << endl;
+        for(unsigned int I = 0 ; I < estadio.qtd_socio_torcedor; I++){
+            if(estadio.guinche_socio_torcedor[I].fila.inicio != nullptr){
+                taxa::DadosRelevantes dados;
+                taxa::init(dados);
+                taxa::extrair_dados_relevantes(estadio.guinche_socio_torcedor[I], dados);
+                cout << "Dados sobre Guiche Socio Torcedor[" << I << "]: " << endl;
+                taxa::display(dados, pes::TipoPessoa::SOCIO_TORCEDOR);
+                cout << "\n";
+            }
+        }
+
+        cout << "\n\nDados Importantes sobre Guiches Normais: " << endl;
+        for(unsigned int I = 0 ; I < estadio.qtd_normal; I++){
+            if(estadio.guinche_normal[I].fila.inicio != nullptr){
+                taxa::DadosRelevantes dados;
+                taxa::init(dados);
+                taxa::extrair_dados_relevantes(estadio.guinche_normal[I], dados);
+                cout << "Dados sobre Guiche Normal[" << I << "]: " << endl;
+                taxa::display(dados, pes::TipoPessoa::NORMAL);
+                cout << "\n";
+            }
         }
 
         cin.get();
@@ -283,7 +413,7 @@ int main(){
     unsigned long carga_tempo = 0;
     unsigned long tempo = 0;
 
-        est::Estadio estadio;
+    est::Estadio estadio;
 
     cout << "Quantidade de guinces socio-torcedor: ";
     cin >> qtd_socio_torcedor;
@@ -296,25 +426,32 @@ int main(){
     cout << "Quantidade de tempo simulado: ";
     cin >> tempo;
 
-        fila::Fila<pes::Pessoa> pessoas_total;
-        fila::init(pessoas_total);
+    fila::Fila<pes::Pessoa> pessoas_total;
+    fila::init(pessoas_total);
 
-        for(unsigned long I = 0 ; I < carga_inicial ; I++){
-                fila::queue(pessoas_total, pes::init_and_randomize());
-        }
+    for(unsigned long I = 0 ; I < carga_inicial ; I++){
+            fila::queue(pessoas_total, pes::init_and_randomize());
+    }
 
-        estadio.guinche_normal = new fila::Fila<pes::Pessoa>[qtd_normal];   ///Allocate Heap
-        estadio.guinche_socio_torcedor = new fila::Fila<pes::Pessoa>[qtd_socio_torcedor];   ///Allocate Heap
-        estadio.total_pessoas = pessoas_total;
-        est::init(estadio, qtd_normal, qtd_socio_torcedor, carga_inicial, carga_tempo);
+    taxa::DadosRelevantes dados_pessoas;
+    taxa::init(dados_pessoas);
+    taxa::extrair_dados_relevantes(pessoas_total, dados_pessoas);
+    cout << "\n\nDados relevantes sobre 'pessoas_total': " << endl;
+    taxa::display_tudo(dados_pessoas);
 
-        //est::display_fila(pessoas_total, "\t");
 
-        mainTimeLoop(estadio, tempo);
+    estadio.guinche_normal = new fila::Fila<pes::Pessoa>[qtd_normal];   ///Allocate Heap
+    estadio.guinche_socio_torcedor = new fila::Fila<pes::Pessoa>[qtd_socio_torcedor];   ///Allocate Heap
+    estadio.total_pessoas = pessoas_total;
+    est::init(estadio, qtd_normal, qtd_socio_torcedor, carga_inicial, carga_tempo);
 
-        //est::display_todas_filas_normais(estadio);
+    //est::display_fila(pessoas_total, "\t");
 
-        delete[] estadio.guinche_normal;
-        delete[] estadio.guinche_socio_torcedor;
+    mainTimeLoop(estadio, tempo);
+
+    //est::display_todas_filas_normais(estadio);
+
+    delete[] estadio.guinche_normal;
+    delete[] estadio.guinche_socio_torcedor;
     return 0;
 }
