@@ -1,0 +1,64 @@
+#ifndef FILA_H_INCLUDED
+#define FILA_H_INCLUDED
+#include "Lista_Encadeada.h"
+
+///////////////////////////////////////////FILA/////////////////////////////////////////////////////////////////////////////
+namespace fila{
+
+    template< typename T >
+    struct Fila{
+        len::L_Enc<T> fila;  /// Struct definindo fila
+    };
+
+    template< typename T >
+    void init( Fila<T> &fila ){  ///void para começar a fila
+        len::init( fila.fila );  /// lenght
+    }
+
+    template< typename T >
+    bool queue( Fila<T> &fila , T dado ){  /// T formar a fila
+        return len::insere_final( fila.fila , dado ); /// Fila com inserção no final
+    }
+
+    template< typename T >
+    T dequeue( Fila<T> &fila ){   /// T remover fila
+
+        T ret = fila.fila.inicio->data;   ///  fila início vai pra data
+        len::remove_inicio( fila.fila );  /// Remover do início
+
+        return ret;
+
+    }
+
+    template< typename T >
+    T consulta_inicio( Fila<T> &fila, bool& goodReturn = nullptr){ /// para consultar início da fila
+
+        if(fila.fila.inicio == nullptr){ /// se for nulo
+            goodReturn = 0; /// retorna zero
+        }else{
+            goodReturn = 1; /// se não for nulo, retorna 1
+        }
+
+        return fila.fila.inicio->data; /// retornar fila indo a data
+
+    }
+
+    template< typename T >
+    unsigned long qtd_fila(fila::Fila<T>& fila){    /// quantidade de pessoas na fila
+        if(fila.fila.inicio == nullptr) return 0; /// se não tiver ninguém na fila, retorne zero
+        len::L_Enc<T> list = fila.fila; /// se lenght tiver alguma coisa já se adiciona a fila
+ //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        unsigned long lenght = 1;
+        L_Enc_elem<T> *interm = list.inicio;
+        while( interm->prox != nullptr ){
+            interm = interm->prox;                /// me ajuda a explicar aqui
+            lenght++;
+        }
+        interm = nullptr;
+        return lenght;
+    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+
+
+#endif // FILA_H_INCLUDED
