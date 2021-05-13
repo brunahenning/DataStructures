@@ -1,0 +1,8 @@
+#ifndef LOOP_H_INCLUDED
+#define LOOP_H_INCLUDED
+
+#define LOOP_H
+#include "Fila.h" /// loop pra fila
+
+
+#endif // LOOP_H_INCLUDED
